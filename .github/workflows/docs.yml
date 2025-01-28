@@ -1,0 +1,48 @@
+# Workflow for generating and publishing DocC documentation
+name: Docs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: swift-bitcoin/swift-bitcoin
+      - name: Install Swift
+        uses: sersoft-gmbh/swifty-linux-action@v3
+        with:
+            release-version: 6.0
+      - name: Build docs
+        run: tools/generate-docs.sh
+        env:
+          WWW_ROOT: 'www'
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./www
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
